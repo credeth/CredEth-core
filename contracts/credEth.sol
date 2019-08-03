@@ -41,7 +41,7 @@ contract CredEth {
     }
 
     function vouching(address _vouchee) external {
-        require(_vouchee == msg.sender, "Not allowed");
+        require(_vouchee != msg.sender, "Not allowed");
         Reputation memory voucher = addressToReputation[msg.sender];
         if (now.sub(voucher.lastVoucheTime) > 24 hours) {
             voucher.voucheCount = 0;
