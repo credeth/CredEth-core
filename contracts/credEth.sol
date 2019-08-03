@@ -10,8 +10,10 @@ contract CredEth is Ownable {
     uint256 public constant INITIAL_REP = 1000;
     uint256 public constant PER_DAY_VOUCHE_COUNT = 3;
     uint256 public constant DAO_CAP = 1000000;
+    uint256 public constant LOCKDROP_CAP = 1000000;
 
     uint256 public distributedByDao;
+    uint256 public distributedByLockdrop;
     address public daoAddress;
 
     modifier onlyDAO() {
@@ -25,10 +27,14 @@ contract CredEth is Ownable {
         uint256 voucheCount;
     }
 
+    address[] reputers;
+
     mapping(address => Reputation) addressToReputation;
 
     event Vouched(address indexed _vouchee, address indexed _voucher, uint256 _vouchedAmount);
     event DaoDistribution(address indexed _to, uint256 _reputation);
+    event Signaled();
+    event IssueReputation(address indexed _to, uint256 _reputation);
 
     constructor (address _daoAddress) public {
         require(_daoAddress != address(0), "Invalid address");
@@ -45,6 +51,7 @@ contract CredEth is Ownable {
         }
         voucher.voucheCount++;
         uint256 voucherRep = voucher.rep == 0 ? 1000 : voucher.rep;
+        _addNewReputers(_vouchee);
         uint256 voucheeRep = getReputation(_vouchee);
         uint256 vouchedGiven = log_2(voucherRep * voucherRep);
         addressToReputation[_vouchee].rep = voucheeRep.add(vouchedGiven);
@@ -56,13 +63,42 @@ contract CredEth is Ownable {
         require(_rep > 0, "Invalid reputation");
         require(DAO_CAP > distributedByDao.add(_rep), "Exceeding cap limit");
         distributedByDao = distributedByDao.add(_rep);
+        _addNewReputers(_to);
         uint256 currentReputation = getReputation(_to);
         addressToReputation[_to].rep = currentReputation.add(_rep);
         emit DaoDistribution(_to, _rep);
     }
 
+    function signal() external {
+        emit Signaled();
+    }
+
+    function issueReputation(address _to, uint256 _reputation) external onlyDAO {
+        require(_to != address(0), "Invalid address");
+        require(_reputation > 0, "Invalid reputation");
+        require(LOCKDROP_CAP > distributedByLockdrop.add(_reputation), "Exceeding cap limit");
+        distributedByLockdrop = distributedByLockdrop.add(_reputation);
+        _addNewReputers(_to);
+        uint256 currentReputation = getReputation(_to);
+        addressToReputation[_to].rep = currentReputation.add(_reputation);
+        emit IssueReputation(_to, _reputation);
+    }
+
     function getReputation(address _of) public view returns(uint256 reputation) {
         reputation = addressToReputation[_of].rep == 0 ? 1000 : addressToReputation[_of].rep;
+    }
+
+    function _addNewReputers(address _holder) internal {
+        if (addressToReputation[_holder].rep == 0)
+            reputers.push(_holder);
+    }
+
+    function getAllReputers() public view returns(address[] memory, uint256[] memory) {
+        uint256[] memory reputations = new uint256[](reputers.length);
+        for (uint256 i = 0; i < reputers.length; i++) {
+            reputations[i] = addressToReputation[reputers[i]].rep;
+        }
+        return (reputers, reputations);
     }
 
 
