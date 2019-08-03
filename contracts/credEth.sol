@@ -26,7 +26,7 @@ contract CredEth {
         uint256 voucheCount;
     }
 
-    address[] reputers;
+    address[] members;
 
     mapping(address => Reputation) addressToReputation;
 
@@ -40,17 +40,18 @@ contract CredEth {
         daoAddress = _daoAddress;
     }
 
-    function vouching(address _vouchee) external {
+    function vouche(address _vouchee) external {
         require(_vouchee != msg.sender, "Not allowed");
         Reputation memory voucher = addressToReputation[msg.sender];
         if (now.sub(voucher.lastVoucheTime) > 24 hours) {
             voucher.voucheCount = 0;
+            voucher.lastVoucheTime = now;
         } else {
             require(voucher.voucheCount <= PER_DAY_VOUCHE_COUNT, "Exceeding limit");
         }
         voucher.voucheCount++;
-        uint256 voucherRep = voucher.rep == 0 ? 1000 : voucher.rep;
-        _addNewReputers(_vouchee);
+        uint256 voucherRep = getReputation(msg.sender);
+        _addNewMember(_vouchee);
         uint256 voucheeRep = getReputation(_vouchee);
         uint256 vouchedGiven = log_2(voucherRep * voucherRep);
         addressToReputation[_vouchee].rep = voucheeRep.add(vouchedGiven);
@@ -62,7 +63,7 @@ contract CredEth {
         require(_rep > 0, "Invalid reputation");
         require(DAO_CAP > distributedByDao.add(_rep), "Exceeding cap limit");
         distributedByDao = distributedByDao.add(_rep);
-        _addNewReputers(_to);
+        _addNewMember(_to);
         uint256 currentReputation = getReputation(_to);
         addressToReputation[_to].rep = currentReputation.add(_rep);
         emit DaoDistribution(_to, _rep);
@@ -77,7 +78,7 @@ contract CredEth {
         require(_reputation > 0, "Invalid reputation");
         require(LOCKDROP_CAP > distributedByLockdrop.add(_reputation), "Exceeding cap limit");
         distributedByLockdrop = distributedByLockdrop.add(_reputation);
-        _addNewReputers(_to);
+        _addNewMember(_to);
         uint256 currentReputation = getReputation(_to);
         addressToReputation[_to].rep = currentReputation.add(_reputation);
         emit IssueReputation(_to, _reputation);
@@ -87,17 +88,17 @@ contract CredEth {
         reputation = addressToReputation[_of].rep == 0 ? 1000 : addressToReputation[_of].rep;
     }
 
-    function _addNewReputers(address _holder) internal {
+    function _addNewMember(address _holder) internal {
         if (addressToReputation[_holder].rep == 0)
-            reputers.push(_holder);
+            members.push(_holder);
     }
 
-    function getAllReputers() public view returns(address[] memory, uint256[] memory) {
-        uint256[] memory reputations = new uint256[](reputers.length);
-        for (uint256 i = 0; i < reputers.length; i++) {
-            reputations[i] = addressToReputation[reputers[i]].rep;
+    function getAllMembers() public view returns(address[] memory, uint256[] memory) {
+        uint256[] memory reputations = new uint256[](members.length);
+        for (uint256 i = 0; i < members.length; i++) {
+            reputations[i] = addressToReputation[members[i]].rep;
         }
-        return (reputers, reputations);
+        return (members, reputations);
     }
 
 
