@@ -22,8 +22,8 @@ contract CredEth {
 
     struct Reputation {
         uint256 rep;
-        uint256 lastVoucheTime;
-        uint256 voucheCount;
+        uint256 lastVouchTime;
+        uint256 vouchCount;
     }
 
     address[] members;
@@ -40,16 +40,15 @@ contract CredEth {
         daoAddress = _daoAddress;
     }
 
-    function vouche(address _vouchee) external {
+    function vouch(address _vouchee) external {
         require(_vouchee != msg.sender, "Not allowed");
-        Reputation memory voucher = addressToReputation[msg.sender];
-        if (now.sub(voucher.lastVoucheTime) > 24 hours) {
-            voucher.voucheCount = 0;
-            voucher.lastVoucheTime = now;
-        } else {
-            require(voucher.voucheCount <= PER_DAY_VOUCHE_COUNT, "Exceeding limit");
+        Reputation storage voucher = addressToReputation[msg.sender];
+        if (now.sub(voucher.lastVouchTime) > 24 hours) {
+            voucher.lastVouchTime = now;
+            voucher.vouchCount = 0;
         }
-        voucher.voucheCount++;
+        voucher.vouchCount++;
+        require(voucher.vouchCount <= PER_DAY_VOUCHE_COUNT, "Exceeding limit");
         uint256 voucherRep = getReputation(msg.sender);
         _addNewMember(_vouchee);
         uint256 voucheeRep = getReputation(_vouchee);
