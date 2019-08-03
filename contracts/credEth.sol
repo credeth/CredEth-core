@@ -1,9 +1,8 @@
 pragma solidity ^0.5.7;
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
-contract CredEth is Ownable {
+contract CredEth {
 
     using SafeMath for uint256;
     
