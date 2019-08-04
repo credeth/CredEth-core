@@ -7,9 +7,9 @@ async function migrate() {
 
     // ganache-core object with already migrated contracts
     // options are as specified in https://github.com/trufflesuite/ganache-cli#library
-    DAOstackMigration.Ganache.provider(process.env.PROVIDER);
-    // migration result object for ganache
-    DAOstackMigration.migration(process.env.NETWORK);
+    // DAOstackMigration.Ganache.provider(process.env.PROVIDER);
+    // // migration result object for ganache
+    //DAOstackMigration.migration(process.env.NETWORK);
 
     const options = {
         provider: process.env.PROVIDER,
@@ -18,9 +18,9 @@ async function migrate() {
         force: true,
         output: 'data/migration.json',
         privateKey: process.env.PRIVATE_KEY,
-        customABIsLocation: "./build",
         params: {
-        private: migrationSpec
+        private: migrationSpec,
+        customABIsLocation: "build/contracts"
         },
     };
 
