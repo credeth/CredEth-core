@@ -20,6 +20,11 @@ contract CredEth {
         _;
     }
 
+    modifier onlyPartner() {
+        require(partnersIndex[msg.sender] != uint256(0), "Not authorised");
+        _;
+    }
+
     struct Reputation {
         uint256 rep;
         uint256 lastVouchTime;
@@ -27,15 +32,23 @@ contract CredEth {
     }
 
     address[] members;
+    address[] partners;
 
     mapping(address => Reputation) addressToReputation;
+    mapping(address => uint256) partnersIndex;
 
     event Vouched(address indexed _vouchee, address indexed _voucher, uint256 _vouchedAmount);
     event DaoDistribution(address indexed _to, uint256 _reputation);
     event Signaled();
     event IssueReputation(address indexed _to, uint256 _reputation);
+    event PartnerAdded(address indexed _partner);
+    event MintReputation(address indexed _to, uint256 _amount, address indexed _mintedBy);
 
-    constructor (address _daoAddress) public {
+    constructor () public {
+    }
+
+    function setDAO(address _daoAddress) public {
+        require(daoAddress == address(0), "Already set");
         require(_daoAddress != address(0), "Invalid address");
         daoAddress = _daoAddress;
     }
@@ -53,7 +66,7 @@ contract CredEth {
         _addNewMember(_vouchee);
         uint256 voucheeRep = getReputation(_vouchee);
         uint256 vouchedGiven = log_2(voucherRep * voucherRep);
-        addressToReputation[_vouchee].rep = voucheeRep.add(vouchedGiven);
+        _mint(_vouchee, vouchedGiven, msg.sender);
         emit Vouched(_vouchee, msg.sender, vouchedGiven);
     }
 
@@ -63,8 +76,7 @@ contract CredEth {
         require(DAO_CAP > distributedByDao.add(_rep), "Exceeding cap limit");
         distributedByDao = distributedByDao.add(_rep);
         _addNewMember(_to);
-        uint256 currentReputation = getReputation(_to);
-        addressToReputation[_to].rep = currentReputation.add(_rep);
+        _mint(_to, _rep, msg.sender);
         emit DaoDistribution(_to, _rep);
     }
 
@@ -78,8 +90,7 @@ contract CredEth {
         require(LOCKDROP_CAP > distributedByLockdrop.add(_reputation), "Exceeding cap limit");
         distributedByLockdrop = distributedByLockdrop.add(_reputation);
         _addNewMember(_to);
-        uint256 currentReputation = getReputation(_to);
-        addressToReputation[_to].rep = currentReputation.add(_reputation);
+        _mint(_to, _reputation, msg.sender);
         emit IssueReputation(_to, _reputation);
     }
 
@@ -98,6 +109,26 @@ contract CredEth {
             reputations[i] = addressToReputation[members[i]].rep;
         }
         return (members, reputations);
+    }
+
+    function addPartner(address _partner) external onlyDAO {
+        require(_partner != address(0), "Invalid address");
+        require(partnersIndex[_partner] == 0, "Already exists");
+        partners.push(_partner);
+        partnersIndex[_partner] = partners.length;
+        emit PartnerAdded(_partner);
+    }
+
+    function mintReputation(address _to, uint256 _amount) external onlyPartner {
+        require(_to != address(0), "Invalid address");
+        require(_amount > 0, "Invalid amount");
+        _mint(_to, _amount, msg.sender);
+    }
+
+    function _mint(address _to, uint256 _amount, address _mintedBy) internal {
+        uint256 currentReputation = getReputation(_to);
+        addressToReputation[_to].rep = currentReputation.add(_amount);
+        emit MintReputation(_to, _amount, _mintedBy);
     }
 
 
